@@ -42,11 +42,13 @@ main()
     if [ "${buildType}" == "NETWORK" ]
     then
        cp -f ${repoDir}/zm-hsm/src/bin/zmhsm ${repoDir}/zm-build/${currentPackage}/opt/zimbra/bin/zmhsm
+       cp -f ${repoDir}/zm-hsm/src/bin/zmschedulesmpolicy ${repoDir}/zm-build/${currentPackage}/opt/zimbra/bin/zmschedulesmpolicy
        cp -f ${repoDir}/zm-archive-utils/src/bin/zmarchiveconfig ${repoDir}/zm-build/${currentPackage}/opt/zimbra/bin/zmarchiveconfig
        cp -f ${repoDir}/zm-archive-utils/src/bin/zmarchivesearch ${repoDir}/zm-build/${currentPackage}/opt/zimbra/bin/zmarchivesearch
        cp -f ${repoDir}/zm-sync-tools/src/bin/zmsyncreverseproxy ${repoDir}/zm-build/${currentPackage}/opt/zimbra/bin/zmsyncreverseproxy
        cp -f ${repoDir}/zm-sync-store/src/bin/zmdevicesstats ${repoDir}/zm-build/${currentPackage}/opt/zimbra/bin/zmdevicesstats
        cp -f ${repoDir}/zm-sync-store/src/bin/zmgdcutil ${repoDir}/zm-build/${currentPackage}/opt/zimbra/bin/zmgdcutil
+       cp -f ${repoDir}/zm-sync-store/src/bin/zmmdmmailschedule ${repoDir}/zm-build/${currentPackage}/opt/zimbra/bin/zmmdmmailschedule
     fi
 
 
@@ -100,7 +102,6 @@ main()
       mkdir -p ${repoDir}/zm-build/${currentPackage}/opt/zimbra/lib/ext/convertd
       mkdir -p ${repoDir}/zm-build/${currentPackage}/opt/zimbra/lib/ext/zimbrahsm
       mkdir -p ${repoDir}/zm-build/${currentPackage}/opt/zimbra/lib/ext/smime
-      mkdir -p ${repoDir}/zm-build/${currentPackage}/opt/zimbra/lib/ext/zm-zulip-proxy-ext
       mkdir -p ${repoDir}/zm-build/${currentPackage}/opt/zimbra/lib/ext/zm-doc-server-ext
 
       cp -f ${repoDir}/zm-backup-store/build/dist/zm-backup-store.jar ${repoDir}/zm-build/${currentPackage}/opt/zimbra/lib/ext/backup/zimbrabackup.jar
@@ -116,11 +117,11 @@ main()
       cp -rf ${repoDir}/zm-convertd-store/build/dist/*jar ${repoDir}/zm-build/${currentPackage}/opt/zimbra/lib/ext/convertd
       cp -f ${repoDir}/zm-twofactorauth-store/build/dist/zm-twofactorauth-store*.jar ${repoDir}/zm-build/${currentPackage}/opt/zimbra/lib/ext/twofactorauth/zimbratwofactorauth.jar
       cp -f ${repoDir}/zm-hsm-store/build/zimbrahsm.jar ${repoDir}/zm-build/${currentPackage}/opt/zimbra/lib/ext/zimbrahsm/zimbrahsm.jar
+      cp -f ${repoDir}/zm-store-managers/build/zm-store-managers*.jar ${repoDir}/zm-build/${currentPackage}/opt/zimbra/lib/ext/zimbrahsm/zm-store-managers.jar
       cp -f ${repoDir}/zm-freebusy-provider-store/build/zimbra-freebusyprovider.jar ${repoDir}/zm-build/${currentPackage}/opt/zimbra/lib/ext/zimbra-freebusy/zimbra-freebusyprovider.jar
       cp -rf ${repoDir}/zm-smime-store/build/dist/*.jar ${repoDir}/zm-build/${currentPackage}/opt/zimbra/lib/ext/smime
       cp -f ${repoDir}/zm-network-gql/build/dist/zm-network-gql*.jar ${repoDir}/zm-build/${currentPackage}/opt/zimbra/lib/ext/zm-gql/zmnetworkgql.jar
       cp -f ${repoDir}/zm-zcs-lib/build/dist/tika-app-1.24.1.jar ${repoDir}/zm-build/${currentPackage}/opt/zimbra/lib/ext/convertd/
-      cp -rf ${repoDir}/zm-zulip-proxy-ext/build/dist/*.jar ${repoDir}/zm-build/${currentPackage}/opt/zimbra/lib/ext/zm-zulip-proxy-ext
       cp -rf ${repoDir}/zm-doc-server-ext/build/dist/*.jar ${repoDir}/zm-build/${currentPackage}/opt/zimbra/lib/ext/zm-doc-server-ext
     fi
 
@@ -231,7 +232,6 @@ main()
                      "zm-2fa-admin-zimlet" \
                      "zm-ucconfig-admin-zimlet" \
                      "zm-securemail-zimlet" \
-                     "zm-smime-applet" \
                      "zm-mobile-sync-admin-zimlet" )
       for i in "${adminZimlets[@]}"
       do

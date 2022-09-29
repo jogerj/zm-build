@@ -38,13 +38,13 @@ zimbra-onlyoffice"
 SERVICES=""
 
 OPTIONAL_PACKAGES="zimbra-qatest \
-zimbra-imapd \
-zimbra-patch \
-zimbra-mta-patch \
-zimbra-proxy-patch \
 zimbra-license-tools \
 zimbra-license-extension \
 zimbra-network-store"
+
+IMMAIL_PACKAGES="zimbra-zimlet-immail-classic \
+zimbra-zimlet-immail-modern \
+zimbra-extension-immail"
 
 ZEXTRAS_PACKAGES="zimbra-connect \
 zimbra-connect-modern \
@@ -55,11 +55,16 @@ zimbra-docs \
 zimbra-docs-modern \
 zimbra-chat \
 zimbra-talk \
+zimbra-zimlet-auth \
+zimbra-zimlet-briefcase-edit-lool \
 zimbra-network-modules-ng"
+
+DEPRECATED_PACKAGES_IN_10="zimbra-zimlet-restore-contacts \
+zimbra-zimlet-duplicate-contacts"
 
 MYDIR="$(CDPATH= cd "$(dirname "$0")" && pwd)"
 if [ "$(cat ${MYDIR}/.BUILD_TYPE)" == "NETWORK" ]; then
-   OPTIONAL_PACKAGES="${OPTIONAL_PACKAGES} zimbra-modern-ui zimbra-modern-zimlets"
+   OPTIONAL_PACKAGES="${OPTIONAL_PACKAGES} zimbra-modern-ui zimbra-modern-zimlets zimbra-zimlet-document-editor zimbra-zimlet-classic-document-editor zimbra-patch zimbra-mta-patch zimbra-proxy-patch zimbra-ldap-patch"
 fi
 
 PACKAGE_DIR="$(CDPATH= cd "$(dirname "$0")" && pwd)/packages"
@@ -81,7 +86,7 @@ REMOVE="no"
 UPGRADE="no"
 HOSTNAME=`hostname --fqdn`
 ZIMBRAINTERNAL=no
-echo $HOSTNAME | egrep -qe 'eng.synacor.com$|eng.zimbra.com$|lab.zimbra.com$' > /dev/null 2>&1
+echo $HOSTNAME | egrep -qe 'eng.synacor.com$|eng.zimbra.com$|lab.zimbra.com$|zimbradev.com$' > /dev/null 2>&1
 if [ $? = 0 ]; then
   ZIMBRAINTERNAL=yes
 fi

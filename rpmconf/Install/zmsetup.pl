@@ -6583,7 +6583,7 @@ sub zimletCleanup {
     return 1;
   } else {
     detail("ldap bind done for $ldap_dn");
-    $result = $ldap->search(base => $ldap_base, scope => 'one', filter => "(|(cn=convertd)(cn=hsm)(cn=hotbackup)(cn=zimbra_cert_manager)(cn=com_zimbra_search)(cn=zimbra_xmbxsearch)(cn=com_zimbra_domainadmin)(cn=com_zimbra_tinymce)(cn=com_zimbra_tasksreminder)(cn=com_zimbra_linkedin)(cn=com_zimbra_social)(cn=com_zimbra_dnd)(cn=com_zextras_chat_open)(cn=com_zextras_talk)(cn=com_zextras_zextras)(cn=com_zextras_client)(cn=com_zimbra_connect_classic)(cn=com_zimbra_connect_modern)(cn=com_zextras_docs)(cn=com_zimbra_docs_modern)(cn=com_zimbra_drive_modern)(cn=com_zextras_drive)(cn=com_zextras_drive_open))", attrs => ['cn']);
+    $result = $ldap->search(base => $ldap_base, scope => 'one', filter => "(|(cn=convertd)(cn=hsm)(cn=hotbackup)(cn=zimbra_cert_manager)(cn=com_zimbra_search)(cn=zimbra_xmbxsearch)(cn=com_zimbra_domainadmin)(cn=com_zimbra_tinymce)(cn=com_zimbra_tasksreminder)(cn=com_zimbra_linkedin)(cn=com_zimbra_social)(cn=com_zimbra_dnd)(cn=com_zextras_chat_open)(cn=com_zextras_talk)(cn=com_zimbra_smime)(cn=zimbra-zimlet-restore-contacts)(cn=zimbra-zimlet-duplicate-contacts))", attrs => ['cn']);
     return $result if ($result->code());
     detail("Processing ldap search results");
     foreach my $entry ($result->all_entries) {
@@ -6593,6 +6593,8 @@ sub zimletCleanup {
         runAsZimbra("/opt/zimbra/bin/zmzimletctl -l undeploy $zimlet");
         system("rm -rf $config{mailboxd_directory}/webapps/service/zimlet/$zimlet")
           if (-d "$config{mailboxd_directory}/webapps/service/zimlet/$zimlet" );
+	system("rm -rf /opt/zimbra/jetty/webapps/zimbra/public/${zimlet}.jarx")
+	  if (-f "/opt/zimbra/jetty/webapps/zimbra/public/${zimlet}.jarx" );
 	system("rm -rf /opt/zimbra/zimlets-deployed/$zimlet")
 	  if (-d "/opt/zimbra/zimlets-deployed/$zimlet" );
 	system("rm -rf /opt/zimbra/zimlets-network/${zimlet}.zip")
@@ -6671,13 +6673,6 @@ sub configInstallZimlets {
       # disable click2call zimlets by default.  #73987
       setLdapCOSConfig("+zimbraZimletAvailableZimlets", "-$zimlet")
         if ($zimlet =~ /click2call/);
-      #disable old smime zimlet
-      setLdapCOSConfig("+zimbraZimletAvailableZimlets", "-$zimlet")
-        if ($zimlet =~ /smime/);
-
-      if (($rc == 0) && ($zimlet eq "com_zimbra_smime") && ($config{UIWEBAPPS} eq "yes")) {
-        system("cp /opt/zimbra/zimlets-deployed/com_zimbra_smime/com_zimbra_smime.jarx /opt/zimbra/jetty/webapps/zimbra/public/com_zimbra_smime.jarx");
-      }
     }
     progress ( "Finished installing network zimlets.\n" );
   }
@@ -7304,11 +7299,29 @@ sub applyConfig {
       }
     }
 
+    # Disable zextras modules
     my $zimbraNetworkModulesNGEnabled = getLdapServerValue("zimbraNetworkModulesNGEnabled");
     if ($zimbraNetworkModulesNGEnabled eq "TRUE"){
        setLdapServerConfig($config{HOSTNAME}, 'zimbraNetworkModulesNGEnabled', 'FALSE');
     }
+
+    my $zimbraNetworkAdminEnabled = getLdapServerValue("zimbraNetworkAdminEnabled");
+    if ($zimbraNetworkAdminEnabled eq "TRUE"){
+       setLdapServerConfig($config{HOSTNAME}, 'zimbraNetworkAdminEnabled', 'FALSE');
+    }
+
+    my $zimbraNetworkAdminNGEnabled = getLdapServerValue("zimbraNetworkAdminNGEnabled");
+    if ($zimbraNetworkAdminNGEnabled eq "TRUE"){
+       setLdapServerConfig($config{HOSTNAME}, 'zimbraNetworkAdminNGEnabled', 'FALSE');
+    }
+
+    my $zimbraNetworkMobileNGEnabled = getLdapServerValue("zimbraNetworkMobileNGEnabled");
+    if ($zimbraNetworkMobileNGEnabled eq "TRUE"){
+       setLdapServerConfig($config{HOSTNAME}, 'zimbraNetworkMobileNGEnabled', 'FALSE');
+    }
+
     enableTLSv1_3();
+    addJDK17Options();
     progress ( "Starting servers..." );
     runAsZimbra ("/opt/zimbra/bin/zmcontrol stop");
     runAsZimbra ("/opt/zimbra/bin/zmcontrol start");
@@ -7384,7 +7397,6 @@ sub configureOnlyoffice {
     # create onlyoffice db and configure it
   if (isEnabled("zimbra-onlyoffice") ) {
     #enable preview
-    setLocalConfig ("oo_linux_install_path", "onlyoffice");
     setLdapCOSConfig("zimbraFeatureViewInHTMLEnabled", "TRUE");
 
     if ($configStatus{configOnlyoffice} eq "CONFIGURED") {
@@ -7399,6 +7411,7 @@ sub configureOnlyoffice {
           qx(chown zimbra:zimbra /opt/zimbra/onlyoffice/bin/process_id.json);
 
           # on new install
+          if (zmupgrade::startSql()) { return 1; }
           createOnlyofficeDB();
           # configure onlyoffice
           print "Configuring Onlyoffice...\n";
@@ -7475,30 +7488,6 @@ sub setupSyslog {
   }
   configLog("setupSyslog");
 }
-
-sub zxsuiteIsAvailable {
-  my $checkNGstatus = 0;
-  my $trying = 0;
-  my $output;
-  my $NGbackup;
-  progress("Checking if the NG started running...");
-  while (( $checkNGstatus != 1 ) && ( $trying < 7 )) {
-        $output = qx(/opt/zimbra/bin/zxsuite backup getBackupInfo);
-        last if ($output =~ /valid/);
-        detail ("retry ".  ++$trying);
-        sleep 5;
-  }
-  progress("done. \n");
-  if ((-f "/opt/zimbra/bin/zxsuite") && ($output =~ /valid(.*)true/ )) {
-     $NGbackup = "true";
-     detail("NG backup is already initialized because /opt/zimbra/bin/zxsuite backup getBackupInfo valid has value: $NGbackup \n");
-  } else {
-    $NGbackup = "false";
-    detail("Modifying the crontab with default schedule because \"/opt/zimbra/bin/zxsuite backup getBackupInfo\" valid has value: $NGbackup \n");
-  }
-  return $NGbackup
-}
-
 
 sub setupCrontab {
   my @backupSchedule=();
@@ -7761,6 +7750,23 @@ sub enableTLSv1_3 {
 	if (isInstalled("zimbra-mta")) {
 		progress( "Setting amavis_sslversion...");
 		my $rc = setLocalConfig("amavis_sslversion", "!TLSv1");
+		progress(($rc == 0) ? "done.\n" : "failed.\n");
+	}
+}
+
+sub addJDK17Options {
+	if (isInstalled("zimbra-core")) {
+		progress( "Setting java options...");
+		my $java_options=getLocalConfigRaw("mailboxd_java_options");
+		my $new_java_options=$java_options;
+		if ($java_options !~ /-Djava.security.egd/) {
+			$new_java_options = $new_java_options." -Djava.security.egd=file:/dev/./urandom";
+		}
+		if ($java_options !~ /--add-opens java.base\/java.lang=ALL-UNNAMED/) {
+			$new_java_options = $new_java_options." --add-opens java.base/java.lang=ALL-UNNAMED";
+		}
+		$new_java_options =~ s/^\s+//;
+		my $rc = setLocalConfig("mailboxd_java_options", $new_java_options)if ($new_java_options ne $java_options);
 		progress(($rc == 0) ? "done.\n" : "failed.\n");
 	}
 }
